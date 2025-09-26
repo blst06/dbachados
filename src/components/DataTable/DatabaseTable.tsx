@@ -43,7 +43,7 @@ export default function DatabaseTable() {
   const { user } = useAuth()
   const { getUser } = useFetchUsers()
   const { escutarTemas, aprovarTema } = useFetchTema();
-  const { escutarAchados, aprovarAchado } = useFetchAchado(); // Importação adicionada
+  const { escutarAchados, aprovarAchado } = useFetchAchado();
   const { escutarProcessos } = useFetchProcesso();
   const { escutarColeta } = useFetchColeta();
   const [isLoading, setIsLoading] = useState(true);
@@ -52,7 +52,6 @@ export default function DatabaseTable() {
   const [searchTerm, setSearchTerm] = useState<string>('')
   const theme = useTheme();
 
-  // Carrega os dados iniciais quando o componente monta
   useEffect(() => {
     const initialLoadEvent = {
       target: {
@@ -63,14 +62,12 @@ export default function DatabaseTable() {
     return () => { };
   }, []);
 
-  //Esse bloco controla a renderizaçao dos dados
   const handleDataTypeChange = (event: { target: { value: string; }; }) => {
     const value = event.target.value as string;
     setDataType(value)
     setIsLoading(true);
     let keywordUnsubscribe: (() => void) | undefined;
 
-    // Sempre escuta keywords
     keywordUnsubscribe = escutarKeyWords((keywords) => {
       setArrayKeyWord(keywords);
     });
@@ -131,12 +128,10 @@ export default function DatabaseTable() {
       editable: false,
       headerClassName: 'bold-header',
       renderCell: (params) => {
-        // Lógica de renderização de botões de ação
         if (header.id === "acoes") {
-          const isPending = dataType === 'tema' ? params.row.situacao === 'pendente' : params.row.situacaoAchado === 'pendente';
+          const isPending = dataType === 'tema' ? params.row.situacao === false : params.row.situacaoAchado === false;
           return (
             <Box sx={{ display: 'flex', flexDirection: 'row', gap: 1 }}>
-              {/* Botão de Aprovar para o Servidor Chefe */}
               {user?.cargo === 'chefe' && isPending && (
                 <Helper title="Clique aqui para aprovar o registro">
                   <IconButton color="success" onClick={() => {
@@ -151,18 +146,16 @@ export default function DatabaseTable() {
                 </Helper>
               )}
 
-              {/* Botão de Editar para o Administrador */}
               {user?.cargo === 'admin' && (
                 <Helper title="Clique aqui para editar o registro">
-                  <IconButton color="primary" onClick={() => handleUpdate(selectedRow)}>
+                  <IconButton color="primary" onClick={() => handleUpdate(params.row.id)}>
                     <EditIcon sx={{ fontSize: '30px', mb: 1, animation: 'flipInX 0.5s ease-in-out' }} />
                   </IconButton>
                 </Helper>
               )}
-              {/* Botão de Deletar para o Administrador */}
               {user?.cargo === 'admin' && (
                 <Helper title="Clique aqui para deletar o registro">
-                  <IconButton color="error" onClick={() => handleDelete(selectedRow)}>
+                  <IconButton color="error" onClick={() => handleDelete(params.row.id)}>
                     <DeleteIcon sx={{ fontSize: '30px', mb: 1, animation: 'flipInX 0.5s ease-in-out' }} />
                   </IconButton>
                 </Helper>
@@ -180,11 +173,18 @@ export default function DatabaseTable() {
         if (header.id === 'analise') {
           return <ModalAnalises key={params.row.id} analise={params.row.analise} />
         }
-        // Se a situação for "aprovado" ou "pendente", exibe o badge
-        if (['situacaoAchado', 'situacao'].includes(header.id) && typeof params.value === 'string') {
-          const isAprovado = params.value === 'aprovado';
+        // CORRIGIDO: Agora o código espera um valor booleano ou null/undefined
+        if (['situacaoAchado', 'situacao', 'sanado'].includes(header.id)) {
+          // Lógica de renderização flexível para booleanos e strings
+          const value = params.value;
+          const isAprovado = value === true || value === 'aprovado' || value === 'julgado' || value === 'sanado';
           const aprovadoColor = theme.palette.mode === 'dark' ? '#22c55e' : '#86efac';
           const pendenteColor = theme.palette.mode === 'dark' ? '#facc15' : '#fcd34d';
+
+          if (value === null || value === undefined) {
+              return <span style={{color: 'grey'}}>Status não definido</span>;
+          }
+
           return (
             <span style={{
               background: isAprovado ? aprovadoColor : pendenteColor,
@@ -224,7 +224,6 @@ export default function DatabaseTable() {
             </Tooltip>
           );
         }
-
 
         if (header.id === 'tipo_financeiro') {
           return (
@@ -279,8 +278,6 @@ export default function DatabaseTable() {
     }));
   };
 
-
-  //cria table pra dados sem relação
   const createRows = (data: any[]): any[] => {
     return data.map((item) => ({
       id: item.id,
@@ -288,15 +285,12 @@ export default function DatabaseTable() {
     }));
   };
 
-  //pegando usuário
   useEffect(() => {
     getUser()
   }, [])
 
-  //traduz o dataGrid
   handleLocalization
 
-  //captura o estado atual do dataGrid
   const getVisibleColumnsFromModel = (columns: GridColDef[], model: GridColumnVisibilityModel) => {
     return console.log(columns, model)
   };
@@ -308,12 +302,10 @@ export default function DatabaseTable() {
     { value: 'relacionamentos', string: 'Coleta' },
   ]
 
-
   function handleUpdate(selectedRow: GridRowId) {
     setSelectedRow(selectedRow);
     setOpenModal(true)
   }
-
 
   const handleCloseModal = () => {
     setOpenModal(false);
@@ -326,11 +318,8 @@ export default function DatabaseTable() {
 
   useEffect(() => {
     dataTypeRef.current = dataType;
-  }, [dataType, selectedRow]); // Removi arrayTopicoAchado e arrayColeta por serem desnecessários aqui
+  }, [dataType, selectedRow]);
 
-
-
-  //função de delete
   const handleDelete = async (selectedRow: GridRowId) => {
     setSelectedRow(selectedRow)
     setOpenModalDelete(true)
