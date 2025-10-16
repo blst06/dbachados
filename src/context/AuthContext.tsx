@@ -5,9 +5,11 @@ import { useNavigate } from "react-router-dom";
 import { TypeAlert } from "../hooks/TypeAlert";
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
 import { authBase } from "../service/firebase.config";
+import env from "../service/env"; // Importe o env
 
 interface AuthContextType {
     isLoggedIn: boolean;
+    isAdmin: boolean; // Adicionado para verificar se é admin
     login: (data: UserLogin, setLoading: React.Dispatch<React.SetStateAction<boolean>>) => void;
     logout: () => void;
     auth: any
@@ -29,11 +31,12 @@ const initialUser: User = {
     email: '',
     cargo: '',
     ativo: '',
-    senha: '' // ou undefined, dependendo da sua lógica
+    senha: ''
 };
 
 export const AuthProvider: React.FC<Props> = ({ children }) => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false); // Novo estado para o admin
     const navigate = useNavigate()
     const cookies = new Cookies()
     const auth = cookies.get('focusToken');
@@ -47,10 +50,17 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
                     if (user.email !== null) {
                         setCookies({ token, email: user.email });
                         setIsLoggedIn(true);
+                        // Verifica se o email do usuário logado é o do admin
+                        if (user.email === env.VITE_EMAIL_ADMIN) {
+                            setIsAdmin(true);
+                        } else {
+                            setIsAdmin(false);
+                        }
                     }
                 });
             } else {
                 setIsLoggedIn(false);
+                setIsAdmin(false); // Garante que o estado de admin seja falso no logout
             }
         });
         return () => unsubscribe();
@@ -59,7 +69,6 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
     const setCookies = (authData: AuthData) => {
         const cookies = new Cookies()
         cookies.set('focusToken', authData.token, { path: '/' })
-
         localStorage.setItem('email', authData.email)
     }
 
@@ -72,7 +81,6 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
             const token = await user.getIdToken();
             if (user.email !== null) {
                 setCookies({ token, email: user.email })
-             
             }
             setIsLoggedIn(true)
             navigate('/dashboard/table');
@@ -94,6 +102,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
             cookies.remove('focusToken', { path: '/' })
             localStorage.removeItem('email')
             setIsLoggedIn(false)
+            setIsAdmin(false); // Limpa o estado de admin no logout
             navigate('/signin')
         } catch (error: any) {
             TypeAlert(error.message, 'error')
@@ -101,7 +110,7 @@ export const AuthProvider: React.FC<Props> = ({ children }) => {
     }
 
     return (
-        <AuthContext.Provider value={{ isLoggedIn, login, logout, auth, user, setUser, users, setUsers }}>
+        <AuthContext.Provider value={{ isLoggedIn, isAdmin, login, logout, auth, user, setUser, users, setUsers }}>
             {children}
         </AuthContext.Provider>
     )

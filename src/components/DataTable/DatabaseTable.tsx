@@ -26,7 +26,7 @@ import ModalColor from '../Forms/FormsColors/ModalColor';
 import useFetchKeyWord from '../Forms/FormsColors/useFetchKeyWord';
 import SearchComponent from './SearchComponent';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-
+import { TypeAlert } from '../../hooks/TypeAlert';
 
 export default function DatabaseTable() {
 
@@ -51,14 +51,13 @@ export default function DatabaseTable() {
   const theme = useTheme();
 
   useEffect(() => {
-    // CORREÇÃO: Não faz nada se o usuário não estiver carregado. Isso quebra o loop.
-    if (!user || !user.id) {
-        setIsLoading(true); // Mostra o skeleton enquanto espera o usuário
+    if (!user?.id) {
+        setIsLoading(true);
         return;
     }
 
     setIsLoading(true);
-    let unsubscribe: () => void;
+    let unsubscribe: (() => void) | undefined;
 
     const setupListeners = async () => {
         escutarKeyWords(setArrayKeyWord);
@@ -92,14 +91,12 @@ export default function DatabaseTable() {
 
     setupListeners();
 
-    // Função de limpeza
     return () => {
         if (unsubscribe) {
             unsubscribe();
         }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataType, user]); // Roda sempre que o dataType ou o user mudar
+  }, [dataType, user?.id]);
 
   const handleDataTypeChange = (event: { target: { value: string; }; }) => {
     setDataType(event.target.value);
@@ -132,13 +129,12 @@ export default function DatabaseTable() {
                         </Helper>
                     )}
 
-                    {user?.cargo === 'admin' && (
-                        <Helper title="Clique aqui para editar o registro">
-                            <IconButton color="primary" onClick={() => handleUpdate(params.row.id)}>
-                                <EditIcon sx={{ fontSize: '30px', mb: 1, animation: 'flipInX 0.5s ease-in-out' }} />
-                            </IconButton>
-                        </Helper>
-                    )}
+                    <Helper title="Clique aqui para editar o registro">
+                        <IconButton color="primary" onClick={() => handleUpdate(params.row.id)}>
+                            <EditIcon sx={{ fontSize: '30px', mb: 1, animation: 'flipInX 0.5s ease-in-out' }} />
+                        </IconButton>
+                    </Helper>
+                   
                     {user?.cargo === 'admin' && (
                         <Helper title="Clique aqui para deletar o registro">
                             <IconButton color="error" onClick={() => handleDelete(params.row.id)}>
@@ -254,9 +250,14 @@ export default function DatabaseTable() {
     { value: 'relacionamentos', string: 'Coleta' },
   ]
 
+  // Lógica da função handleUpdate foi modificada
   function handleUpdate(id: GridRowId) {
-    setSelectedRow(id);
-    setOpenModal(true)
+    if (user?.cargo === 'admin' || user?.cargo === 'chefe') {
+      setSelectedRow(id);
+      setOpenModal(true);
+    } else {
+      TypeAlert('Você não tem permissão para editar este registro.', 'error');
+    }
   }
 
   const handleCloseModal = () => {

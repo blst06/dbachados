@@ -1,7 +1,6 @@
 import { AllUsers, User, UserUpdate } from '../../../types/types';
 import { useAuth } from '../../../context/AuthContext';
 import { db } from '../../../service/firebase.config';
-// CORRIGIDO: Removidas as importações de 'query' e 'where'
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc } from 'firebase/firestore';
 import { TypeAlert, TypeInfo } from '../../../hooks/TypeAlert';
 import { authBase } from '../../../service/firebase.config';

@@ -11,12 +11,14 @@ import FormUpdateProcesso from '../../Forms/FormsTable/Create/FormProcessoPasta/
 import FormUpdateColeta from '../../Forms/FormsTable/Create/formColetaPasta/FormUpdateColeta';
 import FormUpdateKeyWord from '../../Forms/FormsColors/FormUpdateKeyWord';
 
+// A CORREÇÃO ESTÁ AQUI
 const style = {
   position: 'absolute' as 'absolute',
   top: '50%',
   left: '50%',
   transform: 'translate(-50%, -50%)',
-  width: 'fit-content',
+  width: '60vw', // <--- MUDANÇA: De 'fit-content' para '60vw' (60% da largura da tela)
+  maxWidth: '900px', // Adicionado um limite máximo de largura
   bgcolor: 'background.paper',
   border: '1px solid #000',
   boxShadow: 24,
@@ -24,7 +26,6 @@ const style = {
   height: 'fit-content',
   maxHeight: '95vh',
   scrollbarWidth: 'thin',
-  background: 'linear-gradient(90deg, #e2e8f0, #f1f5f9)',
   borderRadius: '10px',
 };
 
@@ -51,11 +52,9 @@ const ModalUpdatePF: React.FC<ModalUpdateProps> = ({ id, dataType, open, onClose
         return <FormUpdateProcesso closeModal={onClose} id={id} user={user} dataType={dataType} />
 
       case 'relacionamentos':
-        //o formUpdateColeta usa um dataTypeLocal para conseguir abrir o formUpdateAchado
         return <FormUpdateColeta closeModal={onClose} id={id}  user={user} />
 
       case 'keyword':
-        //o formUpdateColeta usa um dataTypeLocal para conseguir abrir o formUpdateAchado
         return <FormUpdateKeyWord closeModal={onClose} id={id}  user={user} />
     }
   }

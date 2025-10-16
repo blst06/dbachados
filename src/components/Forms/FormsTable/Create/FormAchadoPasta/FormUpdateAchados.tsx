@@ -1,13 +1,11 @@
 import { Autocomplete, Box, FormControl, FormControlLabel, FormLabel, Grid, Radio, RadioGroup, TextField, ToggleButton, ToggleButtonGroup, Typography, useTheme } from '@mui/material';
 import { useContextTable } from '../../../../../context/TableContext';
 import { Controller, useForm } from 'react-hook-form';
-import { Achado, TopicoAchado, User } from '../../../../../types/types';
+import { Achado, User } from '../../../../../types/types';
 import { TypeAlert } from '../../../../../hooks/TypeAlert';
 import RegisterButton from '../../../../Buttons/RegisterButton';
 import { GridRowId } from '@mui/x-data-grid';
 import { useEffect, useState } from 'react';
-import DateSelector from '../../../../Inputs/DatePicker';
-import RadioInput from '../../../../Inputs/RadioInput';
 import Loader from '../../../../Loader/Loader';
 import AchadoSkeleton from './AchadoSkeleton';
 import useFetchAchado from './useFetchAchado';
@@ -26,13 +24,15 @@ const FormUpdateAchados: React.FC<FormUpdateAchadoProps> = ({ closeModal, id, us
   const { getAllTemas } = useFetchTema();
   const { getAchadoById, updateAchado } = useFetchAchado();
   const [loading, setLoading] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const theme = useTheme();
 
-  const { control, handleSubmit, register, formState: { errors }, reset, watch, setValue } = useForm<Achado>();
+  const { control, handleSubmit, register, formState: { errors }, reset, watch } = useForm<Achado>();
 
-  const gravidade = watch('gravidade');
-  
+  // Variável que define se os campos são somente leitura
+  const isReadOnly = user?.cargo === 'chefe';
+
+  // CORREÇÃO DO LOOP: O useEffect agora só depende do `id` para buscar os dados.
   useEffect(() => {
     const fetchData = async () => {
       if (id) {
@@ -42,7 +42,6 @@ const FormUpdateAchados: React.FC<FormUpdateAchadoProps> = ({ closeModal, id, us
             await getAllTemas();
           }
           const result = await getAchadoById(id);
-
           if (result) {
             reset(result.achado);
           }
@@ -51,11 +50,13 @@ const FormUpdateAchados: React.FC<FormUpdateAchadoProps> = ({ closeModal, id, us
         } finally {
           setIsLoading(false);
         }
+      } else {
+        setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [id, reset, arrayTopicoAchado.length, getAllTemas, getAchadoById]);
+  }, [id]); // Depender apenas do 'id' quebra o loop.
 
   const onSubmit = async (data: Achado) => {
     setLoading(true);
@@ -64,15 +65,18 @@ const FormUpdateAchados: React.FC<FormUpdateAchadoProps> = ({ closeModal, id, us
         const idString = id.toString();
         await updateAchado(idString, data);
         reset();
-        TypeAlert("Achado atualizado", "success");
+        TypeAlert("Registro atualizado com sucesso", "success");
         closeModal();
       }
     } catch (error) {
-      TypeAlert("Erro ao tentar atualizar o Achado", "error");
+      TypeAlert("Erro ao tentar atualizar o registro", "error");
     } finally {
       setLoading(false);
     }
   };
+  
+  // Transforma a data para o formato YYYY-MM-DD que o input type="date" espera
+  const formattedDate = watch('data') ? new Date(watch('data')).toISOString().split('T')[0] : '';
 
   return (
     <>
@@ -89,10 +93,10 @@ const FormUpdateAchados: React.FC<FormUpdateAchadoProps> = ({ closeModal, id, us
               rules={{ required: "Selecione um tema" }}
               render={({ field }) => (
                 <Autocomplete
+                  readOnly={isReadOnly} // CAMPO TRAVADO
                   options={arrayTopicoAchado}
                   getOptionLabel={(option) => option.tema}
                   value={arrayTopicoAchado.find(item => item.id === field.value) || null}
-                  // ADICIONADO: Esta é a correção crucial
                   isOptionEqualToValue={(option, value) => option.id === value.id}
                   onChange={(_, newValue) => field.onChange(newValue?.id || '')}
                   renderInput={(params) => (
@@ -120,11 +124,15 @@ const FormUpdateAchados: React.FC<FormUpdateAchadoProps> = ({ closeModal, id, us
               {...register('achado', { required: 'Campo obrigatório' })}
               error={!!errors.achado}
               helperText={errors.achado?.message}
+              InputProps={{
+                readOnly: isReadOnly, // CAMPO TRAVADO
+              }}
             />
           </Grid>
 
-          <Grid item xs={12} sx={{ mt: 1 }}>
-            {user?.cargo === 'chefe' && (
+          {/* ESTE CAMPO CONTINUA EDITÁVEL PARA O CHEFE */}
+          <Grid item xs={12} sx={{ mt: 2 }}>
+            {(user?.cargo === 'chefe' || user?.cargo === 'admin') && (
               <Controller
                 name="situacaoAchado"
                 control={control}
@@ -148,15 +156,21 @@ const FormUpdateAchados: React.FC<FormUpdateAchadoProps> = ({ closeModal, id, us
               />
             )}
           </Grid>
-
-          <Grid item xs={12}>
-            <Box sx={{ display: "flex", flexDirection: "row", gap: 3, alignItems: 'center' }}>
-              <DateSelector id='data' register={register} errors={errors} label='Data de registro' dataAchado={watch('data')} />
-              <RadioInput id={'gravidade'} label='Gravidade' errors={errors} value={gravidade || 'Baixa'} setValue={setValue} />
-            </Box>
+          
+          <Grid item xs={12} sx={{ mt: 3 }}>
+             <TextField 
+                id='data' 
+                label='Data de registro' 
+                type="date"
+                defaultValue={formattedDate}
+                InputLabelProps={{ shrink: true }}
+                InputProps={{ readOnly: isReadOnly }} // CAMPO TRAVADO
+                variant="filled"
+                fullWidth
+              />
           </Grid>
 
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={6} sx={{ mt: 2 }}>
             <FormControl>
               <FormLabel id="tipo-financeiro-label">Tipo Financeiro</FormLabel>
               <Controller
@@ -164,8 +178,8 @@ const FormUpdateAchados: React.FC<FormUpdateAchadoProps> = ({ closeModal, id, us
                 control={control}
                 render={({ field }) => (
                   <RadioGroup row {...field} value={String(field.value)} onChange={(e) => field.onChange(e.target.value === 'true')}>
-                    <FormControlLabel value="true" control={<Radio />} label="Sim" />
-                    <FormControlLabel value="false" control={<Radio />} label="Não" />
+                    <FormControlLabel value="true" control={<Radio disabled={isReadOnly} />} label="Sim" />
+                    <FormControlLabel value="false" control={<Radio disabled={isReadOnly} />} label="Não" />
                   </RadioGroup>
                 )}
               />
@@ -173,12 +187,12 @@ const FormUpdateAchados: React.FC<FormUpdateAchadoProps> = ({ closeModal, id, us
           </Grid>
 
           <Grid item xs={12} sx={{ mt: 3 }}>
-            <TextField variant='filled' type="text" fullWidth id="criterioGeral" label="Critério Geral" {...register('criterioGeral')} />
+            <TextField variant='filled' type="text" fullWidth id="criterioGeral" label="Critério Geral" {...register('criterioGeral')} InputProps={{ readOnly: isReadOnly }} />
           </Grid>
 
           <Grid item xs={12} sx={{ mt: 3 }}>
             <Typography>Campo de Análise</Typography>
-            <TextField variant='filled' type="text" multiline rows={4} fullWidth id="analise" label="Análise" placeholder='Use # + barra de espaço para indicar um título. Ex: # Título' {...register('analise')} />
+            <TextField variant='filled' type="text" multiline rows={4} fullWidth id="analise" label="Análise" placeholder='Use # + barra de espaço para indicar um título. Ex: # Título' {...register('analise')} InputProps={{ readOnly: isReadOnly }}/>
           </Grid>
 
           {loading ? (

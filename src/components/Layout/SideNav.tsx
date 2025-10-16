@@ -15,8 +15,8 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAppStore } from '../../hooks/appStore';
 import TableChartIcon from '@mui/icons-material/TableChart';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
-import {  useState, useEffect } from 'react';
 import env from '../../service/env';
+import { useAuth } from '../../context/AuthContext'; // 1. Importar o useAuth
 
 const drawerWidth = 240;
 
@@ -46,7 +46,6 @@ const DrawerHeader = styled('div')(({ theme }) => ({
   alignItems: 'center',
   justifyContent: 'flex-end',
   padding: theme.spacing(0, 1),
-  // necessary for content to be below app bar
   ...theme.mixins.toolbar,
 }));
 
@@ -70,30 +69,19 @@ const Drawer = styled(MuiDrawer, { shouldForwardProp: (prop) => prop !== 'open' 
 export default function SideNav() {
   const theme = useTheme();
   const open = useAppStore((state) => state.dopen);
-  const [email] = useState(localStorage.getItem('email'))
+  const location = useLocation();
   
+  // 2. Usar o useAuth para pegar o usuário logado
+  const { user } = useAuth();
 
-  const [pages, setPages] = useState<any>([
-        // {name:'Análises', link:'/dashboard', icon: <QueryStatsIcon/> },
-        {name:'Pesquisa de dados', link:'/dashboard/table',  icon:<TableChartIcon/>},
-        
-  ]);
-
-  const verifyUser = () => {
-    if(email === env.VITE_EMAIL_ADMIN){
-      setPages([
-        // {name:'Análises', link:'/dashboard', icon: <QueryStatsIcon/> },
-        {name:'Pesquisa de dados', link:'/dashboard/table',  icon:<TableChartIcon/>},
-        {name:'Gerência de usuários', link:'/dashboard/usersadmin',  icon:<GroupAddIcon/>}])
-    }
-  }
-  const location = useLocation()
-
-
-useEffect(() => {
-  verifyUser()
-},[])
-  
+  // 3. Definir as páginas com base no email do usuário do contexto
+  const pages = [
+    { name: 'Pesquisa de dados', link: '/dashboard/table', icon: <TableChartIcon /> },
+    // Adiciona a página de admin condicionalmente
+    ...(user && user.email === env.VITE_EMAIL_ADMIN
+      ? [{ name: 'Gerência de usuários', link: '/dashboard/usersadmin', icon: <GroupAddIcon /> }]
+      : []),
+  ];
 
   return (
     <>
@@ -103,7 +91,7 @@ useEffect(() => {
         <Drawer variant="permanent" open={open}>
           <DrawerHeader>
             <IconButton>
-              {theme.direction === 'rtl' ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+              {theme.direction === 'rtl' ? <ChevronRightIcon /> : <ChevronRightIcon />}
             </IconButton>
           </DrawerHeader>
           <Divider />
@@ -150,5 +138,3 @@ useEffect(() => {
     </>
   );
 }
-
-
